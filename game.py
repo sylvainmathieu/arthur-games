@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 surface = pygame.display.set_mode((400,400))
@@ -7,6 +8,8 @@ x = 2
 y = 1
 dx = 0
 dy = 0
+fx = random.randint(0,19)
+fy = random.randint(0,19)
 
 clock = pygame.time.Clock()
 isRunning = True
@@ -41,8 +44,13 @@ while isRunning:
         x = 19
     if y < 0:
         y = 19
+
+    if x == fx and y == fy:
+        fx = random.randint(0,19)
+        fy = random.randint(0,19)
    
     pygame.draw.rect(surface, (50,150,255), (x * 20,y * 20,20,20))
+    pygame.draw.rect(surface, (254,1,1), (fx * 20,fy * 20,20,20))
 
     pygame.display.flip()
     pygame.display.update()
