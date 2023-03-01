@@ -30,16 +30,16 @@ while isRunning:
         if event.type == pygame.QUIT:
             isRunning = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP and dy == 0:
                 dx = 0
                 dy = -1
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN and dy == 0:
                 dx = 0
                 dy = 1
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT and dx == 0:
                 dx = -1
                 dy = 0
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT and dx == 0:
                 dx = 1
                 dy = 0
 
