@@ -17,6 +17,8 @@ dx = 1
 dy = 0
 fx = random.randint(0,19)
 fy = random.randint(0,19)
+snakeColour = (50,150,255)
+foodColour = (254,1,1)
 
 snake = [(x,y)]
 
@@ -56,6 +58,8 @@ while isRunning:
 
         if is_on_the_snake(snake,x,y):
             gameOver = True
+            snakeColour = (150, 100, 30)
+            foodColour = (150, 100, 30)
 
         snake.append((x,y))
 
@@ -70,9 +74,9 @@ while isRunning:
 
     for element in snake:
         ex, ey = element
-        pygame.draw.rect(surface, (50,150,255), (ex * 20,ey * 20,20,20))
+        pygame.draw.rect(surface, snakeColour, (ex * 20,ey * 20,20,20))
 
-    pygame.draw.rect(surface, (254,1,1), (fx * 20,fy * 20,20,20))
+    pygame.draw.rect(surface, foodColour, (fx * 20,fy * 20,20,20))
 
     pygame.display.flip()
     pygame.display.update()
