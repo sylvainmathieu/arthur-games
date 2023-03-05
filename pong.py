@@ -13,8 +13,12 @@ p2Colour = (0,0, 255)
 playerHeight = 80
 player1 = pygame.Rect(2, 100, 10, playerHeight)
 player2 = pygame.Rect(screenWidth - 12, 300, 10, playerHeight)
+ballX = screenWidth / 2
+ballY = screenHeight / 2
 
 playerSpeed = 5
+ballSpeedX = 5
+ballSpeedY = 5
 p1Speed = 0
 p2Speed = 0
 
@@ -58,8 +62,22 @@ while isRunning:
     if player2.y >= screenHeight - playerHeight - 3:
         player2.y = screenHeight - playerHeight - 3
 
+    ballX += ballSpeedX
+    ballY += ballSpeedY
+
+    if ballY > screenHeight:
+        ballSpeedY = -5
+    if ballX > screenWidth:
+        ballSpeedX = -5
+    if ballY < 0:
+        ballSpeedY = 5
+    if ballX < 0:
+        ballSpeedX = 5
+
     pygame.draw.rect(surface, p1Colour, player1)
     pygame.draw.rect(surface, p2Colour, player2)
+
+    pygame.draw.circle(surface, (0,0,0), (ballX, ballY), 5, 5)
 
     pygame.display.flip()
     pygame.display.update()
