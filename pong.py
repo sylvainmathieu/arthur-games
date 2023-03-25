@@ -17,8 +17,9 @@ player1 = pygame.Rect(2, 100, 10, playerHeight)
 player2 = pygame.Rect(screenWidth - 12, 300, 10, playerHeight)
 ballX = screenWidth / 2
 ballY = screenHeight / 2
+ballRadius = 5
 
-playerSpeed = 5
+playerSpeed = 7
 ballSpeedX = 5
 ballSpeedY = 5
 p1Speed = 0
@@ -75,6 +76,8 @@ while isRunning:
     ballX += ballSpeedX
     ballY += ballSpeedY
 
+    ballRect = pygame.Rect(ballX - ballRadius, ballY - ballRadius, ballRadius * 2, ballRadius * 2)
+
     if ballY > screenHeight:
         ballSpeedY = -5
     if ballX > screenWidth:
@@ -86,10 +89,15 @@ while isRunning:
         p2Score += 1
         resetBall()
 
+    if player1.colliderect(ballRect):
+        ballSpeedX = 5
+    if player2.colliderect(ballRect):
+        ballSpeedX = -5
+
     pygame.draw.rect(surface, p1Colour, player1)
     pygame.draw.rect(surface, p2Colour, player2)
 
-    pygame.draw.circle(surface, (0,0,0), (ballX, ballY), 5, 5)
+    pygame.draw.circle(surface, (0,0,0), (ballX, ballY), ballRadius, 5)
 
     p1ScoreSurface = my_font.render(str(p1Score), True, p1Colour)
     p2ScoreSurface = my_font.render(str(p2Score), True, p2Colour)
