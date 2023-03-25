@@ -1,6 +1,8 @@
 import pygame
 
 pygame.init()
+pygame.font.init()
+my_font = pygame.font.SysFont('Annai MN Regular', 30)
 
 screenWidth = 640
 screenHeight = 480
@@ -21,6 +23,14 @@ ballSpeedX = 5
 ballSpeedY = 5
 p1Speed = 0
 p2Speed = 0
+
+p1Score = 0
+p2Score = 0
+
+def resetBall():
+    global ballX, ballY
+    ballX = screenWidth / 2
+    ballY = screenHeight / 2
 
 isRunning = True
 while isRunning:
@@ -68,16 +78,23 @@ while isRunning:
     if ballY > screenHeight:
         ballSpeedY = -5
     if ballX > screenWidth:
-        ballSpeedX = -5
+        p1Score += 1
+        resetBall()
     if ballY < 0:
         ballSpeedY = 5
     if ballX < 0:
-        ballSpeedX = 5
+        p2Score += 1
+        resetBall()
 
     pygame.draw.rect(surface, p1Colour, player1)
     pygame.draw.rect(surface, p2Colour, player2)
 
     pygame.draw.circle(surface, (0,0,0), (ballX, ballY), 5, 5)
+
+    p1ScoreSurface = my_font.render(str(p1Score), True, p1Colour)
+    p2ScoreSurface = my_font.render(str(p2Score), True, p2Colour)
+    surface.blit(p1ScoreSurface, ((screenWidth / 2) - 100, 20))
+    surface.blit(p2ScoreSurface, ((screenWidth / 2) + 60, 20))
 
     pygame.display.flip()
     pygame.display.update()
