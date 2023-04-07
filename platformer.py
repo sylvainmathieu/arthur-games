@@ -38,18 +38,18 @@ def get_frames(path, num_frames, flip):
         frames.append(scaled_frame)
     return frames
 
-# Scale the frames 2 times bigger
 running_right_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, False)
 running_left_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True)
-idle_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
+idle_right_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
+idle_left_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
 
 # Set the animation loop time and initialize the timer
 pygame.time.set_timer(pygame.USEREVENT, 58)
 
 # Initialize the frame index
-frame_index = 0
+player_frame_index = 0
 
-player_frames = idle_frames
+player_frames = idle_right_frames
 
 # Main loop
 running = True
@@ -64,20 +64,20 @@ while running:
                 player_frames = running_left_frames
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
-                player_frames = idle_frames
+                player_frames = idle_right_frames
             elif event.key == pygame.K_LEFT:
-                player_frames = idle_frames
+                player_frames = idle_left_frames
         elif event.type == pygame.USEREVENT:
             # Update the frame index and loop the sequence
-            frame_index += 1
+            player_frame_index += 1
             
-    frame_index = frame_index % len(player_frames)
+    player_frame_index = player_frame_index % len(player_frames)
 
     # Clear the screen
     screen.fill((0, 0, 0))
 
     # Get the current frame and its size    
-    current_frame = player_frames[frame_index]
+    current_frame = player_frames[player_frame_index]
     frame_width, frame_height = current_frame.get_size()
 
     # Calculate the frame position
