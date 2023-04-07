@@ -48,8 +48,12 @@ pygame.time.set_timer(pygame.USEREVENT, 58)
 
 # Initialize the frame index
 player_frame_index = 0
-
 player_frames = idle_right_frames
+
+player_x = (window_width - frame_width) // 2
+player_y = window_height - 64
+
+player_speed_x = 0
 
 # Main loop
 running = True
@@ -60,13 +64,17 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
                 player_frames = running_right_frames
+                player_speed_x = 5
             elif event.key == pygame.K_LEFT:
                 player_frames = running_left_frames
+                player_speed_x = -5
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
                 player_frames = idle_right_frames
+                player_speed_x = 0
             elif event.key == pygame.K_LEFT:
                 player_frames = idle_left_frames
+                player_speed_x = 0
         elif event.type == pygame.USEREVENT:
             # Update the frame index and loop the sequence
             player_frame_index += 1
@@ -80,12 +88,10 @@ while running:
     current_frame = player_frames[player_frame_index]
     frame_width, frame_height = current_frame.get_size()
 
-    # Calculate the frame position
-    frame_x = (window_width - frame_width) // 2
-    frame_y = (window_height - frame_height) // 2
+    player_x = player_x + player_speed_x
 
     # Draw the current frame
-    screen.blit(current_frame, (frame_x, frame_y))
+    screen.blit(current_frame, (player_x, player_y))
 
     # Update the display
     pygame.display.flip()
