@@ -42,6 +42,8 @@ running_right_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32)
 running_left_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True)
 idle_right_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
 idle_left_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
+jump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False)
+jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True)
 
 # Set the animation loop time and initialize the timer
 pygame.time.set_timer(pygame.USEREVENT, 58)
@@ -54,6 +56,13 @@ player_x = (window_width - frame_width) // 2
 player_y = window_height - 64
 
 player_speed_x = 0
+player_speed_y = 0
+player_speed = 5
+player_jump_speed = 10
+gravity = 0.5
+
+player_direction_x = 1
+is_jumping = False
 
 # Main loop
 running = True
@@ -63,32 +72,56 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                player_frames = running_right_frames
-                player_speed_x = 5
+                player_speed_x = player_speed
+                player_direction_x = 1
             elif event.key == pygame.K_LEFT:
-                player_frames = running_left_frames
-                player_speed_x = -5
+                player_speed_x = -player_speed
+                player_direction_x = -1
+            elif event.key == pygame.K_SPACE and player_speed_y == 0:
+                player_speed_y = -player_jump_speed
+                is_jumping = True
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
-                player_frames = idle_right_frames
                 player_speed_x = 0
             elif event.key == pygame.K_LEFT:
-                player_frames = idle_left_frames
                 player_speed_x = 0
         elif event.type == pygame.USEREVENT:
             # Update the frame index and loop the sequence
             player_frame_index += 1
-            
-    player_frame_index = player_frame_index % len(player_frames)
 
     # Clear the screen
     screen.fill((0, 0, 0))
 
-    # Get the current frame and its size    
-    current_frame = player_frames[player_frame_index]
-    frame_width, frame_height = current_frame.get_size()
+    player_speed_y = player_speed_y + gravity
 
     player_x = player_x + player_speed_x
+    player_y = player_y + player_speed_y
+
+    if player_y + (frame_height * 2) > window_height:
+        player_y = window_height - (frame_height * 2)
+        player_speed_y = 0
+        is_jumping = False
+
+    # Animation logic
+    if is_jumping is True:
+        if player_direction_x == 1:
+            player_frames = jump_right_frames
+        else:
+            player_frames = jump_left_frames
+    else:
+        if player_speed_x == 0:
+            if player_direction_x == 1:
+                player_frames = idle_right_frames
+            else:
+                player_frames = idle_left_frames
+        elif player_speed_x > 0:
+            player_frames = running_right_frames
+        else:
+            player_frames = running_left_frames
+
+    player_frame_index = player_frame_index % len(player_frames)
+
+    current_frame = player_frames[player_frame_index]
 
     # Draw the current frame
     screen.blit(current_frame, (player_x, player_y))
