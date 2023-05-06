@@ -44,6 +44,8 @@ idle_right_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).p
 idle_left_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
 jump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False)
 jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True)
+djump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False)
+djump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
 
 # Set the animation loop time and initialize the timer
 pygame.time.set_timer(pygame.USEREVENT, 58)
@@ -61,8 +63,9 @@ player_speed = 5
 player_jump_speed = 10
 gravity = 0.5
 
-player_direction_x = 1
+is_going_right = True
 is_jumping = False
+is_double_jumping = False
 
 # Main loop
 running = True
@@ -73,13 +76,16 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
                 player_speed_x = player_speed
-                player_direction_x = 1
+                is_going_right = True
             elif event.key == pygame.K_LEFT:
                 player_speed_x = -player_speed
-                player_direction_x = -1
+                is_going_right = True
             elif event.key == pygame.K_SPACE and player_speed_y == 0:
                 player_speed_y = -player_jump_speed
                 is_jumping = True
+            elif event.key == pygame.K_SPACE and is_jumping and not is_double_jumping:
+                player_speed_y = -player_jump_speed
+                is_double_jumping = True
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
                 player_speed_x = 0
@@ -101,16 +107,23 @@ while running:
         player_y = window_height - (frame_height * 2)
         player_speed_y = 0
         is_jumping = False
+        is_double_jumping = False
 
     # Animation logic
     if is_jumping is True:
-        if player_direction_x == 1:
-            player_frames = jump_right_frames
+        if is_double_jumping:
+            if is_going_right == True:
+                player_frames = djump_right_frames
+            else:
+                player_frames = djump_left_frames
         else:
-            player_frames = jump_left_frames
+            if is_going_right == True:
+                player_frames = jump_right_frames
+            else:
+                player_frames = jump_left_frames
     else:
         if player_speed_x == 0:
-            if player_direction_x == 1:
+            if is_going_right == True:
                 player_frames = idle_right_frames
             else:
                 player_frames = idle_left_frames
