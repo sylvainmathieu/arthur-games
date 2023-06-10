@@ -47,6 +47,17 @@ jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).pn
 djump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False)
 djump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
 
+terrain = pygame.image.load("assets/Terrain/Terrain (16x16).png") 
+
+def get_sprite(image, x, y, w, h):
+    rect = pygame.Rect(x, y, w, h)
+    frame = pygame.Surface(rect.size).convert()
+    frame.blit(image, (0, 0), rect)
+    frame.set_colorkey((0, 0, 0), pygame.RLEACCEL)
+    return pygame.transform.scale(frame, (w * 2, h * 2))
+
+horizontal_brown_stone = get_sprite(terrain, 192, 0, 48, 16)
+
 # Set the animation loop time and initialize the timer
 pygame.time.set_timer(pygame.USEREVENT, 58)
 
@@ -57,8 +68,8 @@ player_frames = idle_right_frames
 player_x = (window_width - frame_width) // 2
 player_y = window_height - 64
 
-player_speed_x = 0
-player_speed_y = 0
+dx = 0
+vel_y = 0
 player_speed = 5
 player_jump_speed = 10
 gravity = 0.5
@@ -66,6 +77,8 @@ gravity = 0.5
 is_going_right = True
 is_jumping = False
 is_double_jumping = False
+
+stone_rect = pygame.Rect(window_width // 2, window_height - 100, 48 * 2, 16 * 2)
 
 # Main loop
 running = True
@@ -75,22 +88,22 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                player_speed_x = player_speed
+                dx = player_speed
                 is_going_right = True
             elif event.key == pygame.K_LEFT:
-                player_speed_x = -player_speed
-                is_going_right = True
-            elif event.key == pygame.K_SPACE and player_speed_y == 0:
-                player_speed_y = -player_jump_speed
+                dx = -player_speed
+                is_going_right = False
+            elif event.key == pygame.K_SPACE and vel_y == 0:
+                vel_y = -player_jump_speed
                 is_jumping = True
             elif event.key == pygame.K_SPACE and is_jumping and not is_double_jumping:
-                player_speed_y = -player_jump_speed
+                vel_y = -player_jump_speed
                 is_double_jumping = True
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
-                player_speed_x = 0
+                dx = 0
             elif event.key == pygame.K_LEFT:
-                player_speed_x = 0
+                dx = 0
         elif event.type == pygame.USEREVENT:
             # Update the frame index and loop the sequence
             player_frame_index += 1
@@ -98,16 +111,41 @@ while running:
     # Clear the screen
     screen.fill((0, 0, 0))
 
-    player_speed_y = player_speed_y + gravity
+    vel_y = vel_y + gravity
+    if vel_y > 10:
+        vel_y = 10
+    dy = vel_y
 
-    player_x = player_x + player_speed_x
-    player_y = player_y + player_speed_y
+    # floor detection
 
-    if player_y + (frame_height * 2) > window_height:
-        player_y = window_height - (frame_height * 2)
-        player_speed_y = 0
+    player_height = frame_height * 2
+    player_top = player_y
+    player_bottom = player_top + player_height
+    if player_bottom + dy >= window_height:
+        player_y = window_height - player_height
+        vel_y = 0
         is_jumping = False
         is_double_jumping = False
+
+    # x-axis collision detection
+    if stone_rect.colliderect(player_x + dx, player_y, frame_width * 2, frame_height * 2):
+        dx = 0
+
+    # y-axis collision detection
+    if stone_rect.colliderect(player_x, player_y + dy, frame_width * 2, frame_height * 2):
+        if vel_y > 0:
+            dy = stone_rect.top - player_bottom
+            vel_y = 0
+            is_jumping = False
+            is_double_jumping = False
+        else:
+            dy = stone_rect.bottom - player_top
+            vel_y = 0
+            is_jumping = True
+            is_double_jumping = False
+
+    player_x = player_x + dx
+    player_y = player_y + dy
 
     # Animation logic
     if is_jumping is True:
@@ -122,12 +160,12 @@ while running:
             else:
                 player_frames = jump_left_frames
     else:
-        if player_speed_x == 0:
+        if dx == 0:
             if is_going_right == True:
                 player_frames = idle_right_frames
             else:
                 player_frames = idle_left_frames
-        elif player_speed_x > 0:
+        elif dx > 0:
             player_frames = running_right_frames
         else:
             player_frames = running_left_frames
@@ -136,8 +174,11 @@ while running:
 
     current_frame = player_frames[player_frame_index]
 
-    # Draw the current frame
+    # Draw the sprites
+    screen.blit(horizontal_brown_stone, (stone_rect.x, stone_rect.y))
     screen.blit(current_frame, (player_x, player_y))
+
+    pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(player_x, player_top, player_height, player_height), 1)
 
     # Update the display
     pygame.display.flip()
