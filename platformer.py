@@ -69,16 +69,19 @@ player_x = (window_width - frame_width) // 2
 player_y = window_height - 64
 
 dx = 0
+current_dx = 0
 vel_y = 0
 player_speed = 5
 player_jump_speed = 10
-gravity = 0.5
+gravity = 0.6
 
 is_going_right = True
 is_jumping = False
 is_double_jumping = False
 
 stone_rect = pygame.Rect(window_width // 2, window_height - 100, 48 * 2, 16 * 2)
+
+clock = pygame.time.Clock()
 
 # Main loop
 running = True
@@ -88,25 +91,27 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                dx = player_speed
+                current_dx = player_speed
                 is_going_right = True
             elif event.key == pygame.K_LEFT:
-                dx = -player_speed
+                current_dx = -player_speed
                 is_going_right = False
             elif event.key == pygame.K_SPACE and vel_y == 0:
                 vel_y = -player_jump_speed
                 is_jumping = True
             elif event.key == pygame.K_SPACE and is_jumping and not is_double_jumping:
-                vel_y = -player_jump_speed
+                vel_y = -(player_jump_speed * 1.2)
                 is_double_jumping = True
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
-                dx = 0
+                current_dx = 0
             elif event.key == pygame.K_LEFT:
-                dx = 0
+                current_dx = 0
         elif event.type == pygame.USEREVENT:
             # Update the frame index and loop the sequence
             player_frame_index += 1
+
+    dx = current_dx
 
     # Clear the screen
     screen.fill((0, 0, 0))
@@ -127,12 +132,14 @@ while running:
         is_jumping = False
         is_double_jumping = False
 
+    collision_rect = pygame.Rect(player_x + 8, player_top + 10, player_height - 16, player_height - 10)
+
     # x-axis collision detection
-    if stone_rect.colliderect(player_x + dx, player_y, frame_width * 2, frame_height * 2):
+    if stone_rect.colliderect(collision_rect.left + dx, collision_rect.top, collision_rect.width, collision_rect.height):
         dx = 0
 
     # y-axis collision detection
-    if stone_rect.colliderect(player_x, player_y + dy, frame_width * 2, frame_height * 2):
+    if stone_rect.colliderect(collision_rect.left, collision_rect.top + dy, collision_rect.width, collision_rect.height):
         if vel_y > 0:
             dy = stone_rect.top - player_bottom
             vel_y = 0
@@ -178,10 +185,10 @@ while running:
     screen.blit(horizontal_brown_stone, (stone_rect.x, stone_rect.y))
     screen.blit(current_frame, (player_x, player_y))
 
-    pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(player_x, player_top, player_height, player_height), 1)
-
     # Update the display
     pygame.display.flip()
+
+    clock.tick(60)
 
 # Quit Pygame
 pygame.quit()
