@@ -37,6 +37,7 @@ world_map = [
 ]
 
 terrain = pygame.image.load("assets/Terrain/Terrain (16x16).png") 
+background = pygame.image.load("assets/Background/Yellow.png")
 
 def get_sprite(image, x, y, w, h):
     rect = pygame.Rect(x, y, w, h)
@@ -51,6 +52,8 @@ terrain_dict = {
     "3": get_sprite(terrain, 208, 16, 32, 32), # large square stone
     "4": get_sprite(terrain, 240, 0, 16, 48)   # long vertical stone
 }
+
+background_sprite = get_sprite(background, 0, 0, 64, 64)
 
 # Set the frame dimensions and the number of frames
 frame_width = 32
@@ -216,19 +219,19 @@ while running:
 
     current_frame = player_frames[player_frame_index]
 
-    # Draw the sprites
+    # Background tiles
+    for y in range(int(window_height / 128) + 1):
+        for x in range(int(window_width / 128)):
+            screen.blit(background_sprite, (x * 128, y * 128))
+
+    # Wolrd map tiles
     for tile_y, lines in enumerate(world_map):
         for tile_x, tile in enumerate(lines):
             if tile != " ":
                 screen.blit(terrain_dict[tile], (tile_x * 16 * 2, tile_y * 16 * 2))
-    screen.blit(current_frame, (player_x, player_y))
 
-    # pygame.draw.rect(
-    #     surface=screen,
-    #     rect=player_collision_rect,
-    #     color=(255,255,255),
-    #     width=1
-    # )
+    # Player sprite
+    screen.blit(current_frame, (player_x, player_y))
 
     # Update the display
     pygame.display.flip()
