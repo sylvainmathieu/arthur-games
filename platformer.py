@@ -21,8 +21,8 @@ world_map = [
     "1                       1",
     "1                       1",
     "1           3 3 3       1",
-    "1                       1",
-    "1                       1",
+    "1  2                    1",
+    "1  111                  1",
     "1                       1",
     "1                       1",
     "1    3    2  2  2    4441",
@@ -123,11 +123,11 @@ while running:
             if event.key == pygame.K_LEFT:
                 current_dx = -player_speed
                 is_going_right = False
-            if event.key == pygame.K_UP and not is_jumping and vel_y == 0 and not is_double_jumping:
+            if event.key == pygame.K_SPACE and not is_jumping and vel_y == 0 and not is_double_jumping:
                 vel_y = -player_jump_speed
                 is_jumping = True
                 is_double_jumping = False
-            elif event.key == pygame.K_UP and is_jumping and vel_y <= 3 and not is_double_jumping:
+            elif event.key == pygame.K_SPACE and is_jumping and vel_y <= 3 and not is_double_jumping:
                 vel_y = -(player_jump_speed * 1.2)
                 is_double_jumping = True
         if event.type == pygame.KEYUP:
@@ -154,7 +154,7 @@ while running:
     player_top = player_y
     player_bottom = player_top + player_height
 
-    player_collision_rect = pygame.Rect(player_x + 8, player_top + 10, player_height - 16, player_height - 10)
+    player_collision_rect = pygame.Rect(player_x + 18, player_top + 15, player_height - 36, player_height - 15)
 
     for tile_y, lines in enumerate(world_map):
         for tile_x, tile in enumerate(lines):
@@ -222,6 +222,13 @@ while running:
             if tile != " ":
                 screen.blit(terrain_dict[tile], (tile_x * 16 * 2, tile_y * 16 * 2))
     screen.blit(current_frame, (player_x, player_y))
+
+    # pygame.draw.rect(
+    #     surface=screen,
+    #     rect=player_collision_rect,
+    #     color=(255,255,255),
+    #     width=1
+    # )
 
     # Update the display
     pygame.display.flip()
