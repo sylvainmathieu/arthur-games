@@ -1,6 +1,5 @@
 import pygame
 import sys
-import os
 
 # Initialize Pygame
 pygame.init()
@@ -55,169 +54,179 @@ terrain_dict = {
 
 background_sprite = get_sprite(background, 0, 0, 64, 64)
 
-# Set the frame dimensions and the number of frames
-frame_width = 32
-frame_height = 32
-
-# Extract individual frames from the sprite sheet
-def get_frame(sprite_sheet, index):
-    rect = pygame.Rect(index * frame_width, 0, frame_width, frame_height)
-    frame = pygame.Surface(rect.size).convert()
-    frame.blit(sprite_sheet, (0, 0), rect)
-    frame.set_colorkey((0, 0, 0), pygame.RLEACCEL)
-    return frame
-
-def get_frames(path, num_frames, flip):
-    # Load the entire sprite sheet
-    sprite_sheet = pygame.image.load(path)
-    if flip:
-        sprite_sheet = pygame.transform.flip(sprite_sheet, True, False)
-    frames = []
-    for i in range(num_frames):
-        frame = get_frame(sprite_sheet, i)
-        scaled_frame = pygame.transform.scale(frame, (frame_width * 2, frame_height * 2))
-        frames.append(scaled_frame)
-    return frames
-
-running_right_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, False)
-running_left_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True)
-idle_right_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
-idle_left_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
-jump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False)
-jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True)
-djump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False)
-djump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
-
 # Set the animation loop time and initialize the timer
 pygame.time.set_timer(pygame.USEREVENT, 58)
 
-# Initialize the frame index
-player_frame_index = 0
-player_frames = idle_right_frames
-
-player_x = (window_width - frame_width) // 2
-player_y = window_height - 64 - 32
-
-dx = 0
-current_dx = 0
-vel_y = 0
-player_speed = 5
-player_jump_speed = 10
 gravity = 0.6
 
-is_going_right = True
-is_jumping = False
-is_double_jumping = False
-
-# stone_rect = pygame.Rect(window_width // 2, window_height - 100, 48 * 2, 16 * 2)
-
 clock = pygame.time.Clock()
+
+class Player:
+    def __init__(self):
+        self.frame_width = 32
+        self.frame_height = 32
+
+        self.x = (window_width - self.frame_width) // 2
+        self.y = window_height - 64 - self.frame_height
+        self.current_dx = 0
+        self.vel_y = 0
+        self.speed = 5
+        self.jump_speed = 10
+        self.is_going_right = True
+        self.is_jumping = False
+        self.is_double_jumping = False
+
+        self.running_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, False)
+        self.running_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True)
+        self.idle_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
+        self.idle_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
+        self.jump_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False)
+        self.jump_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True)
+        self.djump_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False)
+        self.djump_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
+
+        self.frame_index = 0
+        self.player_frames = self.idle_right_frames
+        
+    def get_frame(self, sprite_sheet, index):
+        # Extract individual frames from the sprite sheet
+        rect = pygame.Rect(index * self.frame_width, 0, self.frame_width, self.frame_height)
+        frame = pygame.Surface(rect.size).convert()
+        frame.blit(sprite_sheet, (0, 0), rect)
+        frame.set_colorkey((0, 0, 0), pygame.RLEACCEL)
+        return frame
+
+    def get_frames(self, path, num_frames, flip):
+        # Load the entire sprite sheet
+        sprite_sheet = pygame.image.load(path)
+        if flip:
+            sprite_sheet = pygame.transform.flip(sprite_sheet, True, False)
+        frames = []
+        for i in range(num_frames):
+            frame = self.get_frame(sprite_sheet, i)
+            scaled_frame = pygame.transform.scale(frame, (self.frame_width * 2, self.frame_height * 2))
+            frames.append(scaled_frame)
+        return frames
+        
+    def update(self, events):
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RIGHT:
+                    self.current_dx = self.speed
+                    self.is_going_right = True
+                if event.key == pygame.K_LEFT:
+                    self.current_dx = -self.speed
+                    self.is_going_right = False
+                if event.key == pygame.K_SPACE and not self.is_jumping and self.vel_y == 0 and not self.is_double_jumping:
+                    self.vel_y = -self.jump_speed
+                    self.is_jumping = True
+                    self.is_double_jumping = False
+                elif event.key == pygame.K_SPACE and self.is_jumping and self.vel_y <= 3 and not self.is_double_jumping:
+                    self.vel_y = -(self.jump_speed * 1.2)
+                    self.is_double_jumping = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_RIGHT and self.current_dx > 0:
+                    self.current_dx = 0
+                elif event.key == pygame.K_LEFT and self.current_dx < 0:
+                    self.current_dx = 0
+            if event.type == pygame.USEREVENT:
+                # Update the frame index and loop the sequence
+                self.frame_index += 1
+
+        dx = self.current_dx
+
+        self.vel_y = self.vel_y + gravity
+        if self.vel_y > 10:
+            self.vel_y = 10
+
+        dy = self.vel_y
+
+        player_height = self.frame_height * 2
+        player_top = self.y
+        player_bottom = player_top + player_height
+
+        player_collision_rect = pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
+
+        for tile_y, lines in enumerate(world_map):
+            for tile_x, tile in enumerate(lines):
+                if tile == " ":
+                    continue
+
+                sprite = terrain_dict[tile]
+                tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                collided = False
+                # x-axis collision detection
+                if tile_rect.colliderect(player_collision_rect.left + dx, player_collision_rect.top, player_collision_rect.width, player_collision_rect.height):
+                    dx = 0
+                    collided = True
+
+                # y-axis collision detection
+                if tile_rect.colliderect(player_collision_rect.left, player_collision_rect.top + dy + 1, player_collision_rect.width, player_collision_rect.height):
+                    if self.vel_y > 0:
+                        dy = tile_rect.top - player_bottom
+                        self.vel_y = 0
+                        self.is_jumping = False
+                        self.is_double_jumping = False
+                    else:
+                        dy = tile_rect.bottom - player_top
+                        self.vel_y = 0
+                        self.is_jumping = True
+                        self.is_double_jumping = False
+                    collided = True
+                
+                if collided:
+                    break
+
+        self.x = self.x + dx
+        self.y = self.y + dy
+
+        # Animation logic
+        if self.is_jumping is True:
+            if self.is_double_jumping:
+                if self.is_going_right == True:
+                    self.player_frames = self.djump_right_frames
+                else:
+                    self.player_frames = self.djump_left_frames
+            else:
+                if self.is_going_right == True:
+                    self.player_frames = self.jump_right_frames
+                else:
+                    self.player_frames = self.jump_left_frames
+        else:
+            if dx == 0:
+                if self.is_going_right == True:
+                    self.player_frames = self.idle_right_frames
+                else:
+                    self.player_frames = self.idle_left_frames
+            elif dx > 0:
+                self.player_frames = self.running_right_frames
+            else:
+                self.player_frames = self.running_left_frames
+
+        self.frame_index = self.frame_index % len(self.player_frames)
+
+        self.current_frame = self.player_frames[self.frame_index]
+
+    def draw(self):
+        screen.blit(self.current_frame, (self.x, self.y))
+
+
+player = Player()
 
 # Main loop
 running = True
 while running:
-    for event in pygame.event.get():
+
+    events = pygame.event.get()
+
+    for event in events:
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT:
-                current_dx = player_speed
-                is_going_right = True
-            if event.key == pygame.K_LEFT:
-                current_dx = -player_speed
-                is_going_right = False
-            if event.key == pygame.K_SPACE and not is_jumping and vel_y == 0 and not is_double_jumping:
-                vel_y = -player_jump_speed
-                is_jumping = True
-                is_double_jumping = False
-            elif event.key == pygame.K_SPACE and is_jumping and vel_y <= 3 and not is_double_jumping:
-                vel_y = -(player_jump_speed * 1.2)
-                is_double_jumping = True
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_RIGHT and current_dx > 0:
-                current_dx = 0
-            elif event.key == pygame.K_LEFT and current_dx < 0:
-                current_dx = 0
-        if event.type == pygame.USEREVENT:
-            # Update the frame index and loop the sequence
-            player_frame_index += 1
 
-    dx = current_dx
+    player.update(events)
 
     # Clear the screen
     screen.fill((0, 0, 0))
-
-    vel_y = vel_y + gravity
-    if vel_y > 10:
-        vel_y = 10
-    dy = vel_y
-
-    # floor detection
-    player_height = frame_height * 2
-    player_top = player_y
-    player_bottom = player_top + player_height
-
-    player_collision_rect = pygame.Rect(player_x + 18, player_top + 15, player_height - 36, player_height - 15)
-
-    for tile_y, lines in enumerate(world_map):
-        for tile_x, tile in enumerate(lines):
-            if tile == " ":
-                continue
-
-            sprite = terrain_dict[tile]
-            tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-            collided = False
-            # x-axis collision detection
-            if tile_rect.colliderect(player_collision_rect.left + dx, player_collision_rect.top, player_collision_rect.width, player_collision_rect.height):
-                dx = 0
-                collided = True
-
-            # y-axis collision detection
-            if tile_rect.colliderect(player_collision_rect.left, player_collision_rect.top + dy + 1, player_collision_rect.width, player_collision_rect.height):
-                if vel_y > 0:
-                    dy = tile_rect.top - player_bottom
-                    vel_y = 0
-                    is_jumping = False
-                    is_double_jumping = False
-                else:
-                    dy = tile_rect.bottom - player_top
-                    vel_y = 0
-                    is_jumping = True
-                    is_double_jumping = False
-                collided = True
-            
-            if collided:
-                break
-
-    player_x = player_x + dx
-    player_y = player_y + dy
-
-    # Animation logic
-    if is_jumping is True:
-        if is_double_jumping:
-            if is_going_right == True:
-                player_frames = djump_right_frames
-            else:
-                player_frames = djump_left_frames
-        else:
-            if is_going_right == True:
-                player_frames = jump_right_frames
-            else:
-                player_frames = jump_left_frames
-    else:
-        if dx == 0:
-            if is_going_right == True:
-                player_frames = idle_right_frames
-            else:
-                player_frames = idle_left_frames
-        elif dx > 0:
-            player_frames = running_right_frames
-        else:
-            player_frames = running_left_frames
-
-    player_frame_index = player_frame_index % len(player_frames)
-
-    current_frame = player_frames[player_frame_index]
 
     # Background tiles
     for y in range(int(window_height / 128) + 1):
@@ -231,7 +240,7 @@ while running:
                 screen.blit(terrain_dict[tile], (tile_x * 16 * 2, tile_y * 16 * 2))
 
     # Player sprite
-    screen.blit(current_frame, (player_x, player_y))
+    player.draw()
 
     # Update the display
     pygame.display.flip()
