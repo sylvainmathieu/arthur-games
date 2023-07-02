@@ -7,7 +7,7 @@ pygame.init()
 # Set window dimensions and title
 window_width = 25 * 32
 window_height = 18 * 32
-window_title = "Image Display"
+window_title = "2D Platformer"
 
 # Create the window
 screen = pygame.display.set_mode((window_width, window_height))
