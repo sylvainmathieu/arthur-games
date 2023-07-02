@@ -86,7 +86,7 @@ class Player:
         self.djump_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
 
         self.frame_index = 0
-        self.player_frames = self.idle_right_frames
+        self.frames = self.idle_right_frames
         
     def get_frame(self, sprite_sheet, index):
         # Extract individual frames from the sprite sheet
@@ -109,6 +109,8 @@ class Player:
         return frames
         
     def update(self, events):
+        
+        # React to player control inputs
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
@@ -135,18 +137,17 @@ class Player:
 
         dx = self.current_dx
 
+        # Apply gravity
         self.vel_y = self.vel_y + gravity
         if self.vel_y > 10:
             self.vel_y = 10
-
         dy = self.vel_y
 
+        # Detect collisions 
         player_height = self.frame_height * 2
         player_top = self.y
         player_bottom = player_top + player_height
-
         player_collision_rect = pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
-
         for tile_y, lines in enumerate(world_map):
             for tile_x, tile in enumerate(lines):
                 if tile == " ":
@@ -155,6 +156,7 @@ class Player:
                 sprite = terrain_dict[tile]
                 tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
                 collided = False
+
                 # x-axis collision detection
                 if tile_rect.colliderect(player_collision_rect.left + dx, player_collision_rect.top, player_collision_rect.width, player_collision_rect.height):
                     dx = 0
@@ -177,6 +179,7 @@ class Player:
                 if collided:
                     break
 
+        # Move the player 
         self.x = self.x + dx
         self.y = self.y + dy
 
@@ -184,32 +187,31 @@ class Player:
         if self.is_jumping is True:
             if self.is_double_jumping:
                 if self.is_going_right == True:
-                    self.player_frames = self.djump_right_frames
+                    self.frames = self.djump_right_frames
                 else:
-                    self.player_frames = self.djump_left_frames
+                    self.frames = self.djump_left_frames
             else:
                 if self.is_going_right == True:
-                    self.player_frames = self.jump_right_frames
+                    self.frames = self.jump_right_frames
                 else:
-                    self.player_frames = self.jump_left_frames
+                    self.frames = self.jump_left_frames
         else:
             if dx == 0:
                 if self.is_going_right == True:
-                    self.player_frames = self.idle_right_frames
+                    self.frames = self.idle_right_frames
                 else:
-                    self.player_frames = self.idle_left_frames
+                    self.frames = self.idle_left_frames
             elif dx > 0:
-                self.player_frames = self.running_right_frames
+                self.frames = self.running_right_frames
             else:
-                self.player_frames = self.running_left_frames
+                self.frames = self.running_left_frames
 
-        self.frame_index = self.frame_index % len(self.player_frames)
+        self.frame_index = self.frame_index % len(self.frames)
 
-        self.current_frame = self.player_frames[self.frame_index]
+        self.current_frame = self.frames[self.frame_index]
 
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
-
 
 player = Player()
 
