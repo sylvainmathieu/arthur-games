@@ -22,15 +22,15 @@ world_map = [
     "1           3 3 3       1",
     "1  2                    1",
     "1  111                  1",
-    "1                       1",
+    "1           M           1",
     "1                       1",
     "1    3    2  2  2    4441",
     "1           111         1",
     "1                       1",
     "1                       1",
     "1 2                     1",
-    "1             4         1",
-    "1     2                 1",
+    "1                       1",
+    "1     2            M    1",
     "1                       1",
     "1111111111111111111111111"
 ]
@@ -61,13 +61,30 @@ gravity = 0.6
 
 clock = pygame.time.Clock()
 
+def get_frame(sprite_sheet, index, frame_width, frame_height):
+    # Extract individual frames from the sprite sheet
+    rect = pygame.Rect(index * frame_width, 0, frame_width, frame_height)
+    frame = pygame.Surface(rect.size).convert()
+    frame.blit(sprite_sheet, (0, 0), rect)
+    frame.set_colorkey((0, 0, 0), pygame.RLEACCEL)
+    return frame
+
+def get_frames(path, num_frames, flip, frame_width, frame_height):
+    # Load the entire sprite sheet
+    sprite_sheet = pygame.image.load(path)
+    if flip:
+        sprite_sheet = pygame.transform.flip(sprite_sheet, True, False)
+    frames = []
+    for i in range(num_frames):
+        frame = get_frame(sprite_sheet, i, frame_width, frame_height)
+        scaled_frame = pygame.transform.scale(frame, (frame_width * 2, frame_height * 2))
+        frames.append(scaled_frame)
+    return frames
+
 class Player:
     def __init__(self):
-        self.frame_width = 32
-        self.frame_height = 32
-
-        self.x = (window_width - self.frame_width) // 2
-        self.y = window_height - 64 - self.frame_height
+        self.x = (window_width - 32) // 2
+        self.y = window_height - 64 - 32
         self.current_dx = 0
         self.vel_y = 0
         self.speed = 5
@@ -76,37 +93,17 @@ class Player:
         self.is_jumping = False
         self.is_double_jumping = False
 
-        self.running_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, False)
-        self.running_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True)
-        self.idle_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False)
-        self.idle_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True)
-        self.jump_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False)
-        self.jump_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True)
-        self.djump_right_frames = self.get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False)
-        self.djump_left_frames = self.get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True)
+        self.running_right_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, False, 32, 32)
+        self.running_left_frames = get_frames("assets/Main Characters/Ninja Frog/Run (32x32).png", 12, True, 32, 32)
+        self.idle_right_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, False, 32, 32)
+        self.idle_left_frames = get_frames("assets/Main Characters/Ninja Frog/Idle (32x32).png", 11, True, 32, 32)
+        self.jump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, False, 32, 32)
+        self.jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True, 32, 32)
+        self.djump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False, 32, 32)
+        self.djump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True, 32, 32)
 
         self.frame_index = 0
         self.frames = self.idle_right_frames
-        
-    def get_frame(self, sprite_sheet, index):
-        # Extract individual frames from the sprite sheet
-        rect = pygame.Rect(index * self.frame_width, 0, self.frame_width, self.frame_height)
-        frame = pygame.Surface(rect.size).convert()
-        frame.blit(sprite_sheet, (0, 0), rect)
-        frame.set_colorkey((0, 0, 0), pygame.RLEACCEL)
-        return frame
-
-    def get_frames(self, path, num_frames, flip):
-        # Load the entire sprite sheet
-        sprite_sheet = pygame.image.load(path)
-        if flip:
-            sprite_sheet = pygame.transform.flip(sprite_sheet, True, False)
-        frames = []
-        for i in range(num_frames):
-            frame = self.get_frame(sprite_sheet, i)
-            scaled_frame = pygame.transform.scale(frame, (self.frame_width * 2, self.frame_height * 2))
-            frames.append(scaled_frame)
-        return frames
         
     def update(self, events):
         
@@ -144,13 +141,13 @@ class Player:
         dy = self.vel_y
 
         # Detect collisions 
-        player_height = self.frame_height * 2
+        player_height = 32 * 2
         player_top = self.y
         player_bottom = player_top + player_height
         player_collision_rect = pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
         for tile_y, lines in enumerate(world_map):
             for tile_x, tile in enumerate(lines):
-                if tile == " ":
+                if not tile.isdigit():
                     continue
 
                 sprite = terrain_dict[tile]
@@ -213,7 +210,37 @@ class Player:
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
 
+class Mushroom:
+    def __init__(self, x, y):
+        self.idle_frames_right = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, True, 32, 32)
+        self.idle_frames_left = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, False, 32, 32)
+
+        self.frame_index = 0
+        self.current_frame = self.idle_frames_right[self.frame_index]
+
+        self.x = x
+        self.y = y
+
+    def update(self, events):
+        for event in events:
+            if event.type == pygame.USEREVENT:
+                self.frame_index += 1
+
+        self.frame_index = self.frame_index % len(self.idle_frames_right)
+        self.current_frame = self.idle_frames_right[self.frame_index]
+
+    def draw(self):
+        screen.blit(self.current_frame, (self.x, self.y))
+
 player = Player()
+
+enemies = []
+
+# Creating the enemies
+for tile_y, lines in enumerate(world_map):
+    for tile_x, tile in enumerate(lines):
+        if tile == "M":
+            enemies.append(Mushroom(tile_x * 32, tile_y * 32))
 
 # Main loop
 running = True
@@ -226,6 +253,8 @@ while running:
             running = False
 
     player.update(events)
+    for enemy in enemies:
+        enemy.update(events)
 
     # Clear the screen
     screen.fill((0, 0, 0))
@@ -238,11 +267,13 @@ while running:
     # Wolrd map tiles
     for tile_y, lines in enumerate(world_map):
         for tile_x, tile in enumerate(lines):
-            if tile != " ":
+            if tile.isdigit():
                 screen.blit(terrain_dict[tile], (tile_x * 16 * 2, tile_y * 16 * 2))
 
     # Player sprite
     player.draw()
+    for enemy in enemies:
+        enemy.draw()
 
     # Update the display
     pygame.display.flip()
