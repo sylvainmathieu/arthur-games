@@ -214,6 +214,8 @@ class Mushroom:
     def __init__(self, x, y):
         self.idle_frames_right = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, True, 32, 32)
         self.idle_frames_left = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, False, 32, 32)
+        self.running_frames_right = get_frames("assets/Enemies/Mushroom/Run (32x32).png", 16, True, 32, 32)
+        self.running_frames_left = get_frames("assets/Enemies/Mushroom/Run (32x32).png", 16, False, 32, 32)
 
         self.frame_index = 0
         self.current_frame = self.idle_frames_right[self.frame_index]
@@ -221,13 +223,85 @@ class Mushroom:
         self.x = x
         self.y = y
 
+        self.idle_counter = -1
+        self.dx = 1
+        self.next_dx = 0
+        self.is_going_right = True
+
     def update(self, events):
         for event in events:
             if event.type == pygame.USEREVENT:
                 self.frame_index += 1
+                self.idle_counter -= 1
 
-        self.frame_index = self.frame_index % len(self.idle_frames_right)
-        self.current_frame = self.idle_frames_right[self.frame_index]
+        if self.dx > 0:
+            self.is_going_right = True
+            frames = self.running_frames_right
+        elif self.dx < 0:
+            self.is_going_right = False
+            frames = self.running_frames_left
+        else:
+            if self.is_going_right == True:
+                frames = self.idle_frames_right
+            else:
+                frames = self.idle_frames_left
+
+        # Edge detection
+        if self.dx > 0:
+            self.edge_detection_square = pygame.Rect(self.x + 64, self.y + 64 - 5, 10, 10)
+        elif self.dx < 0:
+            self.edge_detection_square = pygame.Rect(self.x - 10, self.y + 64 - 5, 10, 10)
+        else:
+            self.edge_detection_square = None
+
+        if self.edge_detection_square is not None:           
+            edge_detection_collided = False
+            for tile_y, lines in enumerate(world_map):
+                for tile_x, tile in enumerate(lines):
+                    if not tile.isdigit():
+                        continue
+                    sprite = terrain_dict[tile]
+                    tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                    if self.edge_detection_square.colliderect(tile_rect):
+                        edge_detection_collided = True
+                        break
+
+            if not edge_detection_collided:
+                self.idle_counter = 28
+                if self.dx > 0:
+                    self.next_dx = -1
+                elif self.dx < 0:
+                    self.next_dx = 1
+                self.dx = 0
+        
+        # Wall detection
+        self.collision_square = pygame.Rect(self.x + self.dx + 5, self.y + 25, 64 - 10, 64 - 25)
+        wall_collided = False
+        if self.dx != 0:
+            for tile_y, lines in enumerate(world_map):
+                for tile_x, tile in enumerate(lines):
+                    if not tile.isdigit():
+                        continue
+                    sprite = terrain_dict[tile]
+                    tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                    if self.collision_square.colliderect(tile_rect):
+                        wall_collided = True
+                        break
+            if wall_collided:
+                self.idle_counter = 28
+                if self.dx > 0:
+                    self.next_dx = -1
+                elif self.dx < 0:
+                    self.next_dx = 1
+                self.dx = 0
+
+        if self.idle_counter == 0:
+            self.dx = self.next_dx
+
+        self.frame_index = self.frame_index % len(frames)
+        self.current_frame = frames[self.frame_index]
+
+        self.x += self.dx      
 
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
