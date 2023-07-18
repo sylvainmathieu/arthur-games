@@ -81,6 +81,8 @@ def get_frames(path, num_frames, flip, frame_width, frame_height):
         frames.append(scaled_frame)
     return frames
 
+enemies = []
+
 class Player:
     def __init__(self):
         self.x = (window_width - 32) // 2
@@ -104,7 +106,14 @@ class Player:
 
         self.frame_index = 0
         self.frames = self.idle_right_frames
-        
+
+        self.is_dying = False
+    
+    def get_collision_rect(self):
+        player_height = 32 * 2
+        player_top = self.y
+        return pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
+
     def update(self, events):
         
         # React to player control inputs
@@ -141,10 +150,7 @@ class Player:
         dy = self.vel_y
 
         # Detect collisions 
-        player_height = 32 * 2
-        player_top = self.y
-        player_bottom = player_top + player_height
-        player_collision_rect = pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
+        collision_rect = self.get_collision_rect()
         for tile_y, lines in enumerate(world_map):
             for tile_x, tile in enumerate(lines):
                 if not tile.isdigit():
@@ -155,19 +161,19 @@ class Player:
                 collided = False
 
                 # x-axis collision detection
-                if tile_rect.colliderect(player_collision_rect.left + dx, player_collision_rect.top, player_collision_rect.width, player_collision_rect.height):
+                if tile_rect.colliderect(collision_rect.left + dx, collision_rect.top, collision_rect.width, collision_rect.height):
                     dx = 0
                     collided = True
 
                 # y-axis collision detection
-                if tile_rect.colliderect(player_collision_rect.left, player_collision_rect.top + dy + 1, player_collision_rect.width, player_collision_rect.height):
+                if tile_rect.colliderect(collision_rect.left, collision_rect.top + dy + 1, collision_rect.width, collision_rect.height):
                     if self.vel_y > 0:
-                        dy = tile_rect.top - player_bottom
+                        dy = tile_rect.top - collision_rect.bottom
                         self.vel_y = 0
                         self.is_jumping = False
                         self.is_double_jumping = False
                     else:
-                        dy = tile_rect.bottom - player_top
+                        dy = tile_rect.bottom - collision_rect.top
                         self.vel_y = 0
                         self.is_jumping = True
                         self.is_double_jumping = False
@@ -175,6 +181,28 @@ class Player:
                 
                 if collided:
                     break
+
+        # Detect collisions with the enemies
+        if not self.is_dying:
+            for enemy in enemies:
+                if enemy.is_dying:
+                    continue
+                
+                # x-axis collision detection
+                if enemy.collides(
+                    collision_rect.left + dx,
+                    collision_rect.top,
+                    collision_rect.width,
+                    collision_rect.height):
+                    self.is_dying = True
+
+                # y-axis collision detection
+                elif enemy.collides(
+                    collision_rect.left,
+                    collision_rect.top + dy + 1,
+                    collision_rect.width,
+                    collision_rect.height):
+                    enemy.is_dying = True
 
         # Move the player 
         self.x = self.x + dx
@@ -210,6 +238,12 @@ class Player:
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
 
+        if self.is_dying:
+            color = (255, 0, 0)
+        else:
+            color = (0, 255, 0)
+        pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
+
 class Mushroom:
     def __init__(self, x, y):
         self.idle_frames_right = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, True, 32, 32)
@@ -227,6 +261,11 @@ class Mushroom:
         self.dx = 1
         self.next_dx = 0
         self.is_going_right = True
+
+        self.is_dying = False
+
+    def get_collision_rect(self):
+        return pygame.Rect(self.x + self.dx + 5, self.y + 25, 64 - 10, 64 - 25)
 
     def update(self, events):
         for event in events:
@@ -248,13 +287,13 @@ class Mushroom:
 
         # Edge detection
         if self.dx > 0:
-            self.edge_detection_square = pygame.Rect(self.x + 64, self.y + 64 - 5, 10, 10)
+            self.edge_detection_rect = pygame.Rect(self.x + 64, self.y + 64 - 5, 10, 10)
         elif self.dx < 0:
-            self.edge_detection_square = pygame.Rect(self.x - 10, self.y + 64 - 5, 10, 10)
+            self.edge_detection_rect = pygame.Rect(self.x - 10, self.y + 64 - 5, 10, 10)
         else:
-            self.edge_detection_square = None
+            self.edge_detection_rect = None
 
-        if self.edge_detection_square is not None:           
+        if self.edge_detection_rect is not None:           
             edge_detection_collided = False
             for tile_y, lines in enumerate(world_map):
                 for tile_x, tile in enumerate(lines):
@@ -262,7 +301,7 @@ class Mushroom:
                         continue
                     sprite = terrain_dict[tile]
                     tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-                    if self.edge_detection_square.colliderect(tile_rect):
+                    if self.edge_detection_rect.colliderect(tile_rect):
                         edge_detection_collided = True
                         break
 
@@ -275,7 +314,7 @@ class Mushroom:
                 self.dx = 0
         
         # Wall detection
-        self.collision_square = pygame.Rect(self.x + self.dx + 5, self.y + 25, 64 - 10, 64 - 25)
+        collision_rect = self.get_collision_rect()
         wall_collided = False
         if self.dx != 0:
             for tile_y, lines in enumerate(world_map):
@@ -284,7 +323,7 @@ class Mushroom:
                         continue
                     sprite = terrain_dict[tile]
                     tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-                    if self.collision_square.colliderect(tile_rect):
+                    if collision_rect.colliderect(tile_rect):
                         wall_collided = True
                         break
             if wall_collided:
@@ -303,18 +342,26 @@ class Mushroom:
 
         self.x += self.dx      
 
+    def collides(self, x, y, width, height):
+        rect = pygame.Rect(x + self.dx, y, width, height)
+        return self.get_collision_rect().colliderect(rect)
+
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
 
-player = Player()
-
-enemies = []
+        if self.is_dying:
+            color = (255, 0, 0)
+        else:
+            color = (0, 255, 0)
+        pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
 
 # Creating the enemies
 for tile_y, lines in enumerate(world_map):
     for tile_x, tile in enumerate(lines):
         if tile == "M":
             enemies.append(Mushroom(tile_x * 32, tile_y * 32))
+
+player = Player()
 
 # Main loop
 running = True
