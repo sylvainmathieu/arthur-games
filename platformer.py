@@ -24,7 +24,7 @@ world_map = [
     "1  111                  1",
     "1           M           1",
     "1                       1",
-    "1    3    2  2  2    4441",
+    "1    3 3  2  2  2    4441",
     "1           111         1",
     "1                       1",
     "1                       1",
@@ -76,12 +76,16 @@ def get_frames(path, num_frames, flip, frame_width, frame_height):
         sprite_sheet = pygame.transform.flip(sprite_sheet, True, False)
     frames = []
     for i in range(num_frames):
+        if flip:
+            i = num_frames - 1 - i
         frame = get_frame(sprite_sheet, i, frame_width, frame_height)
         scaled_frame = pygame.transform.scale(frame, (frame_width * 2, frame_height * 2))
         frames.append(scaled_frame)
     return frames
 
 enemies = []
+
+debug_mode = True
 
 class Player:
     def __init__(self):
@@ -103,6 +107,8 @@ class Player:
         self.jump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Jump (32x32).png", 1, True, 32, 32)
         self.djump_right_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, False, 32, 32)
         self.djump_left_frames = get_frames("assets/Main Characters/Ninja Frog/Double Jump (32x32).png", 6, True, 32, 32)
+        self.hit_right_frames = get_frames("assets/Main Characters/Ninja Frog/Hit (32x32).png", 7, False, 32, 32)
+        self.hit_left_frames = get_frames("assets/Main Characters/Ninja Frog/Hit (32x32).png", 7, True, 32, 32)
 
         self.frame_index = 0
         self.frames = self.idle_right_frames
@@ -113,11 +119,29 @@ class Player:
         player_height = 32 * 2
         player_top = self.y
         return pygame.Rect(self.x + 18, player_top + 15, player_height - 36, player_height - 15)
+    
+    def start_dying(self):
+        self.frame_index = 0
+        self.is_dying = True
+        self.dx = 0
+        self.current_dx = 0
+        if self.is_going_right:
+            self.current_dx = -1
+        else:
+            self.current_dx = 1
+        self.vel_y = -self.jump_speed
 
     def update(self, events):
         
         # React to player control inputs
         for event in events:
+            if event.type == pygame.USEREVENT:
+                if not self.is_dying or self.frame_index < len(self.frames) - 1:
+                    self.frame_index += 1
+
+            if self.is_dying:
+                continue
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
                     self.current_dx = self.speed
@@ -137,9 +161,6 @@ class Player:
                     self.current_dx = 0
                 elif event.key == pygame.K_LEFT and self.current_dx < 0:
                     self.current_dx = 0
-            if event.type == pygame.USEREVENT:
-                # Update the frame index and loop the sequence
-                self.frame_index += 1
 
         dx = self.current_dx
 
@@ -150,66 +171,74 @@ class Player:
         dy = self.vel_y
 
         # Detect collisions 
-        collision_rect = self.get_collision_rect()
-        for tile_y, lines in enumerate(world_map):
-            for tile_x, tile in enumerate(lines):
-                if not tile.isdigit():
-                    continue
-
-                sprite = terrain_dict[tile]
-                tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-                collided = False
-
-                # x-axis collision detection
-                if tile_rect.colliderect(collision_rect.left + dx, collision_rect.top, collision_rect.width, collision_rect.height):
-                    dx = 0
-                    collided = True
-
-                # y-axis collision detection
-                if tile_rect.colliderect(collision_rect.left, collision_rect.top + dy + 1, collision_rect.width, collision_rect.height):
-                    if self.vel_y > 0:
-                        dy = tile_rect.top - collision_rect.bottom
-                        self.vel_y = 0
-                        self.is_jumping = False
-                        self.is_double_jumping = False
-                    else:
-                        dy = tile_rect.bottom - collision_rect.top
-                        self.vel_y = 0
-                        self.is_jumping = True
-                        self.is_double_jumping = False
-                    collided = True
-                
-                if collided:
-                    break
-
-        # Detect collisions with the enemies
         if not self.is_dying:
-            for enemy in enemies:
-                if enemy.is_dying:
-                    continue
-                
-                # x-axis collision detection
-                if enemy.collides(
-                    collision_rect.left + dx,
-                    collision_rect.top,
-                    collision_rect.width,
-                    collision_rect.height):
-                    self.is_dying = True
+            collision_rect = self.get_collision_rect()
+            for tile_y, lines in enumerate(world_map):
+                for tile_x, tile in enumerate(lines):
+                    if not tile.isdigit():
+                        continue
 
-                # y-axis collision detection
-                elif enemy.collides(
-                    collision_rect.left,
-                    collision_rect.top + dy + 1,
-                    collision_rect.width,
-                    collision_rect.height):
-                    enemy.is_dying = True
+                    sprite = terrain_dict[tile]
+                    tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                    collided = False
+
+                    # x-axis collision detection
+                    if tile_rect.colliderect(collision_rect.left + dx, collision_rect.top, collision_rect.width, collision_rect.height):
+                        dx = 0
+                        collided = True
+
+                    # y-axis collision detection
+                    if tile_rect.colliderect(collision_rect.left, collision_rect.top + dy + 1, collision_rect.width, collision_rect.height):
+                        if self.vel_y > 0:
+                            dy = tile_rect.top - collision_rect.bottom
+                            self.vel_y = 0
+                            self.is_jumping = False
+                            self.is_double_jumping = False
+                        else:
+                            dy = tile_rect.bottom - collision_rect.top
+                            self.vel_y = 0
+                            self.is_jumping = True
+                            self.is_double_jumping = False
+                        collided = True
+                    
+                    if collided:
+                        break
+
+            # Detect collisions with the enemies
+            if not self.is_dying:
+                for enemy in enemies:
+                    if enemy.is_dying:
+                        continue
+                    
+                    # x-axis collision detection
+                    if enemy.collides(
+                        collision_rect.left + dx,
+                        collision_rect.top,
+                        collision_rect.width,
+                        collision_rect.height):
+                        self.start_dying()
+
+                    # y-axis collision detection
+                    elif enemy.collides(
+                        collision_rect.left,
+                        collision_rect.top + dy + 1,
+                        collision_rect.width,
+                        collision_rect.height):
+                        enemy.frame_index = 0
+                        enemy.is_dying = True
+                        enemy.dx = 0
 
         # Move the player 
         self.x = self.x + dx
         self.y = self.y + dy
 
         # Animation logic
-        if self.is_jumping is True:
+        if self.is_dying:
+            if self.is_going_right == True:
+                self.frames = self.hit_right_frames
+            else:
+                self.frames = self.hit_left_frames
+        elif self.is_jumping is True:
             if self.is_double_jumping:
                 if self.is_going_right == True:
                     self.frames = self.djump_right_frames
@@ -231,18 +260,20 @@ class Player:
             else:
                 self.frames = self.running_left_frames
 
-        self.frame_index = self.frame_index % len(self.frames)
+        if not self.is_dying:
+            self.frame_index = self.frame_index % len(self.frames)
 
         self.current_frame = self.frames[self.frame_index]
 
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
 
-        if self.is_dying:
-            color = (255, 0, 0)
-        else:
-            color = (0, 255, 0)
-        pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
+        if debug_mode:
+            if self.is_dying:
+                color = (255, 0, 0)
+            else:
+                color = (0, 255, 0)
+            pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
 
 class Mushroom:
     def __init__(self, x, y):
@@ -349,11 +380,12 @@ class Mushroom:
     def draw(self):
         screen.blit(self.current_frame, (self.x, self.y))
 
-        if self.is_dying:
-            color = (255, 0, 0)
-        else:
-            color = (0, 255, 0)
-        pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
+        if debug_mode:
+            if self.is_dying:
+                color = (255, 0, 0)
+            else:
+                color = (0, 255, 0)
+            pygame.draw.rect(screen, color, self.get_collision_rect(), 1)
 
 # Creating the enemies
 for tile_y, lines in enumerate(world_map):
@@ -392,9 +424,9 @@ while running:
                 screen.blit(terrain_dict[tile], (tile_x * 16 * 2, tile_y * 16 * 2))
 
     # Player sprite
-    player.draw()
     for enemy in enemies:
         enemy.draw()
+    player.draw()
 
     # Update the display
     pygame.display.flip()
