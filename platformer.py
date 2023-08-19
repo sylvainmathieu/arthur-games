@@ -19,7 +19,7 @@ world_map = [
     "1                       1",
     "1                       1",
     "1                       1",
-    "1           3 3 3       1",
+    "1                       1",
     "1  2                    1",
     "1  111                  1",
     "1           M           1",
@@ -85,7 +85,7 @@ def get_frames(path, num_frames, flip, frame_width, frame_height):
 
 enemies = []
 
-debug_mode = True
+debug_mode = False
 
 class Player:
     def __init__(self):
@@ -224,9 +224,7 @@ class Player:
                         collision_rect.top + dy + 1,
                         collision_rect.width,
                         collision_rect.height):
-                        enemy.frame_index = 0
-                        enemy.is_dying = True
-                        enemy.dx = 0
+                        enemy.start_dying()
 
         # Move the player 
         self.x = self.x + dx
@@ -281,6 +279,8 @@ class Mushroom:
         self.idle_frames_left = get_frames("assets/Enemies/Mushroom/Idle (32x32).png", 14, False, 32, 32)
         self.running_frames_right = get_frames("assets/Enemies/Mushroom/Run (32x32).png", 16, True, 32, 32)
         self.running_frames_left = get_frames("assets/Enemies/Mushroom/Run (32x32).png", 16, False, 32, 32)
+        self.hit_frames_right = get_frames("assets/Enemies/Mushroom/Hit.png", 5, True, 32, 32)
+        self.hit_frames_left = get_frames("assets/Enemies/Mushroom/Hit.png", 5, False, 32, 32)
 
         self.frame_index = 0
         self.current_frame = self.idle_frames_right[self.frame_index]
@@ -294,17 +294,28 @@ class Mushroom:
         self.is_going_right = True
 
         self.is_dying = False
+        self.vel_y = 0
+
+    def start_dying(self):
+        self.frame_index = 0
+        self.is_dying = True
+        if self.is_going_right:
+            self.dx = -1
+        else:
+            self.dx = 1
+        self.vel_y = -10
 
     def get_collision_rect(self):
         return pygame.Rect(self.x + self.dx + 5, self.y + 25, 64 - 10, 64 - 25)
 
     def update(self, events):
-        for event in events:
-            if event.type == pygame.USEREVENT:
-                self.frame_index += 1
-                self.idle_counter -= 1
 
-        if self.dx > 0:
+        if self.is_dying:
+            if self.is_going_right == True:
+                frames = self.hit_frames_right
+            else:
+                frames = self.hit_frames_left
+        elif self.dx > 0:
             self.is_going_right = True
             frames = self.running_frames_right
         elif self.dx < 0:
@@ -316,62 +327,92 @@ class Mushroom:
             else:
                 frames = self.idle_frames_left
 
-        # Edge detection
-        if self.dx > 0:
-            self.edge_detection_rect = pygame.Rect(self.x + 64, self.y + 64 - 5, 10, 10)
-        elif self.dx < 0:
-            self.edge_detection_rect = pygame.Rect(self.x - 10, self.y + 64 - 5, 10, 10)
-        else:
-            self.edge_detection_rect = None
+        for event in events:
+            if event.type == pygame.USEREVENT:
+                if not self.is_dying or self.frame_index < len(frames) - 1:
+                    self.frame_index += 1
+                self.idle_counter -= 1
 
-        if self.edge_detection_rect is not None:           
-            edge_detection_collided = False
+        # Apply gravity
+        self.vel_y = self.vel_y + gravity
+        if self.vel_y > 10:
+            self.vel_y = 10
+        dy = self.vel_y
+
+        if not self.is_dying:
+
+            # Edge detection
+            if self.dx > 0:
+                self.edge_detection_rect = pygame.Rect(self.x + 64, self.y + 64 - 5, 10, 10)
+            elif self.dx < 0:
+                self.edge_detection_rect = pygame.Rect(self.x - 10, self.y + 64 - 5, 10, 10)
+            else:
+                self.edge_detection_rect = None
+
+            if self.edge_detection_rect is not None:           
+                edge_detection_collided = False
+                for tile_y, lines in enumerate(world_map):
+                    for tile_x, tile in enumerate(lines):
+                        if not tile.isdigit():
+                            continue
+                        sprite = terrain_dict[tile]
+                        tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                        if self.edge_detection_rect.colliderect(tile_rect):
+                            edge_detection_collided = True
+                            break
+
+                if not edge_detection_collided:
+                    self.idle_counter = 28
+                    if self.dx > 0:
+                        self.next_dx = -1
+                    elif self.dx < 0:
+                        self.next_dx = 1
+                    self.dx = 0
+            
+            # Wall detection
+            collision_rect = self.get_collision_rect()
+            wall_collided = False
+            if self.dx != 0:
+                for tile_y, lines in enumerate(world_map):
+                    for tile_x, tile in enumerate(lines):
+                        if not tile.isdigit():
+                            continue
+                        sprite = terrain_dict[tile]
+                        tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
+                        if collision_rect.colliderect(tile_rect):
+                            wall_collided = True
+                            break
+                if wall_collided:
+                    self.idle_counter = 28
+                    if self.dx > 0:
+                        self.next_dx = -1
+                    elif self.dx < 0:
+                        self.next_dx = 1
+                    self.dx = 0
+
+            # Floor detection
             for tile_y, lines in enumerate(world_map):
                 for tile_x, tile in enumerate(lines):
                     if not tile.isdigit():
                         continue
                     sprite = terrain_dict[tile]
                     tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-                    if self.edge_detection_rect.colliderect(tile_rect):
-                        edge_detection_collided = True
-                        break
+                    collision_rect_y = collision_rect.copy()
+                    collision_rect_y.bottom += 1
+                    if collision_rect_y.colliderect(tile_rect):
+                        if self.vel_y > 0:
+                            self.vel_y = 0
+                            dy = 0
+                            break
 
-            if not edge_detection_collided:
-                self.idle_counter = 28
-                if self.dx > 0:
-                    self.next_dx = -1
-                elif self.dx < 0:
-                    self.next_dx = 1
-                self.dx = 0
-        
-        # Wall detection
-        collision_rect = self.get_collision_rect()
-        wall_collided = False
-        if self.dx != 0:
-            for tile_y, lines in enumerate(world_map):
-                for tile_x, tile in enumerate(lines):
-                    if not tile.isdigit():
-                        continue
-                    sprite = terrain_dict[tile]
-                    tile_rect = pygame.Rect(tile_x * 32, tile_y * 32, sprite.get_width(), sprite.get_height())
-                    if collision_rect.colliderect(tile_rect):
-                        wall_collided = True
-                        break
-            if wall_collided:
-                self.idle_counter = 28
-                if self.dx > 0:
-                    self.next_dx = -1
-                elif self.dx < 0:
-                    self.next_dx = 1
-                self.dx = 0
-
-        if self.idle_counter == 0:
-            self.dx = self.next_dx
+            if self.idle_counter == 0:
+                self.dx = self.next_dx
 
         self.frame_index = self.frame_index % len(frames)
         self.current_frame = frames[self.frame_index]
 
-        self.x += self.dx      
+        self.x += self.dx
+        self.y += dy
 
     def collides(self, x, y, width, height):
         rect = pygame.Rect(x + self.dx, y, width, height)
